@@ -1,4 +1,19 @@
-import { _decorator, Component, Node, Prefab, instantiate } from 'cc'
+import {
+  _decorator,
+  Component,
+  Node,
+  Prefab,
+  instantiate,
+  EventTouch,
+  input,
+  Input,
+  Vec2,
+  Vec3,
+  UITransform,
+  v2,
+  v3,
+  tween
+} from 'cc'
 const { ccclass, property } = _decorator
 
 @ccclass('ContentControl')
@@ -24,8 +39,17 @@ export class ContentControl extends Component {
   @property({ tooltip: '棋盘节点' })
   public chessBoard: Node[][] = []
 
+  swapBeforeIndex: number[] = null // 交换之前的位置
+  swapAfterIndex: number[] = null // 交换之后的位置
+
+  @property({ type: Vec2, tooltip: '开始触摸位置' })
+  private startTouchPos: Vec2 = null
+
+  isSwap: boolean = false // 是否正在交换
+
   start() {
-    this.generateBoard();
+    this.generateBoard()
+    this.onMove()
   }
 
   update(deltaTime: number) {}
@@ -37,27 +61,342 @@ export class ContentControl extends Component {
 
     for (let i = 0; i < this.boardHeight; i++) {
       for (let j = 0; j < this.boardWidth; j++) {
-        // this.chessBoard[i][j] = this.generatePiece(i, j);
+        this.chessBoard[i][j] = this.generatePiece(i, j)
       }
     }
   }
 
   generatePiece(i: number, j: number) {
-    const piece = this.getRandomChessPiece();
-    const [x, y] = this.getPiecePosition(i, j);
-    piece.setPosition(x, y);
-    this.node.addChild(piece);
-    return piece;
+    const piece = this.getRandomChessPiece()
+    const [x, y] = this.getPiecePosition(i, j)
+    piece.setPosition(x, y)
+    this.node.addChild(piece)
+    return piece
   }
 
   getPiecePosition(i: number, j: number): number[] {
-    return [this.x + j * this.spacing, this.y - i * this.spacing];
+    return [this.x + j * this.spacing, this.y - i * this.spacing]
   }
 
   getRandomChessPiece() {
-    const randomIndex = Math.floor(Math.random() * this.chessPieces.length);
-    const randomChessPiece = this.chessPieces[randomIndex];
-    const piece = instantiate(randomChessPiece);
-    return piece;
+    const randomIndex = Math.floor(Math.random() * this.chessPieces.length)
+    const randomChessPiece = this.chessPieces[randomIndex]
+    const piece = instantiate(randomChessPiece)
+    return piece
+  }
+
+  onMove() {
+    input.on(Input.EventType.TOUCH_START, this.onBoardTouchStart, this)
+    input.on(Input.EventType.TOUCH_MOVE, this.onBoardTouchMove, this)
+  }
+
+  /**
+   * 触摸开始回调
+   * @param event 触摸事件
+   */
+  onBoardTouchStart(event: EventTouch) {
+    console.log('event', event.getUILocation())
+    this.startTouchPos = event.getUILocation()
+    this.swapBeforeIndex = this.getPieceAtPosition(this.startTouchPos)
+  }
+
+  /**
+   * 触摸回调
+   */
+  onBoardTouchMove(event: EventTouch) {
+    if (this.isSwap || !this.swapBeforeIndex) return
+    const target = this.getSwappingPieces(event)
+    const [row, col] = this.swapBeforeIndex
+    if (!target) return
+    this.swapPiece([row, col], target, (isSame: boolean) => {
+      if (isSame) {
+        this.swapPiece([row, col], target)
+      } else {
+        const isMatch = this.checkAndRemoveMatchesAt([[row, col], target])
+        if (!isMatch) this.swapPiece([row, col], target)
+      }
+    })
+    this.swapBeforeIndex = null
+  }
+
+  /**
+   * 交换棋子
+   * @param param0 交换棋子1位置
+   * @param param1 交换棋子2位置
+   * @param cb 交换回调
+   */
+  swapPiece(
+    [row1, col1]: number[],
+    [row2, col2]: number[],
+    cb?: (isSame: boolean) => void
+  ) {
+    this.isSwap = true
+    const temp = this.chessBoard[row1][col1]
+    this.chessBoard[row1][col1] = this.chessBoard[row2][col2]
+    this.chessBoard[row2][col2] = temp
+    this.swapAnimation(
+      this.chessBoard[row1][col1],
+      this.chessBoard[row2][col2],
+      () => {
+        this.isSwap = false
+        if (
+          this.chessBoard[row1][col1].name === this.chessBoard[row2][col2].name
+        ) {
+          cb?.(true)
+        } else {
+          cb?.(false)
+        }
+      }
+    )
+  }
+
+  /**
+   * 交换动画
+   * @param a 交换棋子1
+   * @param b 交换棋子2
+   * @param cb 交换回调
+   */
+  swapAnimation(a: Node, b: Node, cb: () => void) {
+    if (!a || !b) return
+    const speed = 0.2
+    const aPos = new Vec3(a.position.x, a.position.y)
+    const bPos = new Vec3(b.position.x, b.position.y)
+
+    const swapAPromise = new Promise(resolve => {
+      tween(a)
+        .to(speed, { position: bPos })
+        .call(() => {
+          resolve(true)
+        })
+        .start()
+    })
+
+    const swapBPromise = new Promise(resolve => {
+      tween(b)
+        .to(speed, { position: aPos })
+        .call(() => {
+          resolve(true)
+        })
+        .start()
+    })
+
+    // @ts-ignore
+    Promise.allSettled([swapAPromise, swapBPromise]).then(() => {
+      cb()
+    })
+  }
+
+  /**
+   * 检测消除
+   */
+  checkAndRemoveMatchesAt(pos: number[][]): boolean{
+    let matches = []
+    for (let [row, col] of pos) {
+      // 横向匹配
+      let cols = this.checkMatch(row, col, true)
+      // 纵向匹配
+      let rows = this.checkMatch(row, col, false)
+      matches = matches.concat(cols, rows)
+    }
+    if (matches.length === 0) return
+    // 消除
+    for (let [row, col] of matches) {
+      this.node.removeChild(this.chessBoard[row][col])
+      this.chessBoard[row][col] = null
+    }
+
+    const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
+    if (movedPos.length > 0) {
+      this.checkAndRemoveMatchesAt(movedPos)
+    }
+    return true
+  }
+
+  /**
+   * 向下移动棋子
+   */
+  movePiecesDown() {
+    const movedPos = []
+    for (let col = this.chessBoard[0].length - 1; col >= 0; col--) {
+      let nullCount = 0
+      for (let row = this.chessBoard.length - 1; row >= 0; row--) {
+        const piece = this.chessBoard[row][col]
+        if (piece === null) {
+          nullCount++
+        } else if (nullCount > 0) {
+          this.downAnimation(
+            this.chessBoard[row][col],
+            this.getPiecePosition(row + nullCount, col)
+          )
+          this.chessBoard[row + nullCount][col] = this.chessBoard[row][col]
+          this.chessBoard[row][col] = null
+          movedPos.push([row + nullCount, col])
+        }
+      }
+    }
+    return movedPos
+  }
+
+  /**
+   * 向下移动棋子动画
+   * @param param0 移动棋子
+   * @param param1 目标位置
+   */
+  downAnimation(node: Node, [x, y]: number[], cb?: () => void) {
+    const speed = 0.2
+    tween(node)
+      .to(speed, { position: v3(x, y) })
+      .call(() => {
+        cb?.()
+      })
+      .start()
+  }
+
+  /**
+   * 重新填充和检查棋子
+   */
+  refillAndCheck() {
+    const movedPos = []
+    for (let row = this.chessBoard.length - 1; row >= 0; row--) {
+      for (let col = 0; col < this.chessBoard[row].length; col++) {
+        if (this.chessBoard[row][col] === null) {
+          this.chessBoard[row][col] = this.generatePiece(-(row + 1), col)
+          movedPos.push([row, col])
+          this.downAnimation(
+            this.chessBoard[row][col],
+            this.getPiecePosition(row, col)
+          )
+        }
+      }
+    }
+
+    return movedPos
+  }
+
+  /**
+   * 随机获取棋子
+   */
+  getRandomPiece() {
+    return Math.floor(Math.random() * 5) + 1
+  }
+
+  /**
+   * 检查匹配
+   * @param {number} row  // 行
+   * @param {number} col  // 列
+   * @param {boolean} horizontal  // 是否横向匹配
+   * @returns {[number,number][]}  // 匹配坐标
+   */
+  checkMatch(row, col, horizontal) {
+    const matches = [[row, col]]
+    const current = this.chessBoard[row][col].name
+    let i = 1
+    if (horizontal) {
+      // 往左遍历
+      while (col - i >= 0 && this.chessBoard[row][col - i].name === current) {
+        matches.push([row, col - i])
+        col++
+      }
+      i = 1
+      // 往右遍历
+      while (
+        col + i < this.chessBoard[row].length &&
+        this.chessBoard[row][col + i].name === current
+      ) {
+        matches.push([row, col + i])
+        i++
+      }
+    } else {
+      // 往上遍历
+      while (row - i >= 0 && this.chessBoard[row - i][col].name === current) {
+        matches.push([row - i, col])
+        i++
+      }
+      i = 1
+      // 往下遍历
+      while (
+        row + i < this.chessBoard.length &&
+        this.chessBoard[row + i][col].name === current
+      ) {
+        matches.push([row + i, col])
+        i++
+      }
+    }
+    return matches.length >= 3 ? matches : []
+  }
+
+  /**
+   * 获取棋子下标
+   * @param pos 触摸位置
+   * @returns 棋子下标
+   */
+  getPieceAtPosition(pos: Vec2 | null): number[] | undefined {
+    const uiTransform = this.node.getComponent(UITransform)
+    const { x, y } = uiTransform.convertToNodeSpaceAR(v3(pos.x, pos.y))
+    for (let row = 0; row < this.chessBoard.length; row++) {
+      for (let col = 0; col < this.chessBoard[row].length; col++) {
+        const piece = this.chessBoard[row][col]
+        if (piece) {
+          const rect = piece.getComponent(UITransform).getBoundingBox()
+          if (rect.contains(v2(x, y))) {
+            return [row, col]
+          }
+        }
+      }
+    }
+    return
+  }
+
+  /**
+   * 获取交换的棋子
+   */
+  getSwappingPieces(event: EventTouch) {
+    if (!this.startTouchPos || !event || !this.swapBeforeIndex || this.isSwap) {
+      return null
+    }
+    const { x: moveX, y: moveY } = event.getUILocation()
+    const [beforeRow, beforeCol] = this.swapBeforeIndex
+    let target: number[] = null
+    if (
+      Math.abs(moveX - this.startTouchPos.x) >
+      Math.abs(moveY - this.startTouchPos.y)
+    ) {
+      if (Math.abs(moveX - this.startTouchPos.x) < 30) return null
+      // 水平方向交换
+      if (moveX - this.startTouchPos.x > 0) {
+        target = [beforeRow, beforeCol + 1]
+      } else {
+        target = [beforeRow, beforeCol - 1]
+      }
+    } else {
+      if (Math.abs(moveY - this.startTouchPos.y) < 30) return null
+      // 垂直方向交换
+      if (moveY - this.startTouchPos.y > 0) {
+        target = [beforeRow - 1, beforeCol]
+        // 向上交换
+      } else {
+        target = [beforeRow + 1, beforeCol]
+        // 向下交换
+      }
+    }
+
+    if (!this.isWithInBoard(target, this.boardWidth, this.boardHeight)) {
+      return null
+    }
+
+    return target
+  }
+
+  /**
+   * 检查是否在棋盘内
+   * @param target 目标位置
+   * @param boardWidth 棋盘宽度
+   * @param boardHeight 棋盘高度
+   * @returns 是否在棋盘内
+   */
+  isWithInBoard(target, boardWidth, boardHeight) {
+    if (!target) return false
+    const [row, col] = target
+    return row >= 0 && row < boardHeight && col >= 0 && col < boardWidth
   }
 }
