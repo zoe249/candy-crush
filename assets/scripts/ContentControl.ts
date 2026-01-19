@@ -16,6 +16,8 @@ import {
   AudioSource,
   Animation
 } from 'cc'
+import { Piece, PieceState } from './Piece'
+
 const { ccclass, property } = _decorator
 
 @ccclass('ContentControl')
@@ -57,6 +59,9 @@ export class ContentControl extends Component {
   @property({ tooltip: '交换音效' })
   audio: { [key: string]: AudioSource } = {}
 
+  @property({ type: Prefab })
+  public effect: Prefab; // 匹配灯资源
+
   onLoad() {
     const audio = {}
     this.node.getComponents(AudioSource).forEach(item => {
@@ -81,6 +86,24 @@ export class ContentControl extends Component {
       for (let j = 0; j < this.boardWidth; j++) {
         this.chessBoard[i][j] = this.generatePiece(i, j)
       }
+    }
+    this.setRandomPieceState()
+  }
+
+  /**
+   * 随机设置棋子状态
+   * 挑选随机棋子为消除整列或消除整行
+   */
+  setRandomPieceState() {
+    const count = 4
+    let i = 0
+    while (i < count) {
+      const randomRow = Math.floor(Math.random() * this.boardHeight)
+      const randomCol = Math.floor(Math.random() * this.boardWidth)
+      const randomPiece = this.chessBoard[randomRow][randomCol].getComponent(Piece)
+      randomPiece.pieceState = Math.random() <= 0.5 ? PieceState.LINE : Math.random() <= 0.5 ? PieceState.COLUMN : PieceState.WRAP
+      randomPiece.loadPiece()
+      i++
     }
   }
 
@@ -113,12 +136,19 @@ export class ContentControl extends Component {
    * @param event 触摸事件
    */
   onBoardTouchStart(event: EventTouch) {
-    this.audio["drop"]?.play();
+    // this.audio["drop"]?.play();
     this.startTouchPos = event.getUILocation()
     this.swapBeforeIndex = this.getPieceAtPosition(this.startTouchPos)
     if (!this.swapBeforeIndex) return
     const [row, col] = this.swapBeforeIndex
-    this.setClickLight(row, col)
+    // this.setClickLight(row, col)
+
+    // 附带技能的棋子
+    const piece = this.chessBoard[row][col].getComponent(Piece)
+    if (piece) {
+      this.playEffect(row, col)
+      console.log(piece.pieceState, '消除整列 or 消除整列')
+    }
   }
 
   /**
@@ -425,6 +455,22 @@ export class ContentControl extends Component {
     if (!target) return false
     const [row, col] = target
     return row >= 0 && row < boardHeight && col >= 0 && col < boardWidth
+  }
+
+  playEffect(row: number, col: number) {
+    // 消除该棋子
+    this.node.removeChild(this.chessBoard[row][col])
+    this.chessBoard[row][col] = null
+
+    // 播放动画
+    const [x, y] = this.getPiecePosition(row, col)
+    const effect = instantiate(this.effect)
+    effect.setPosition(x, y)
+    this.node.addChild(effect)
+    effect.getComponent(Animation).play()
+    setTimeout(() => {
+      effect.destroy()
+    }, 2000)
   }
 
   /**

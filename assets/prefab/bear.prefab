@@ -242,7 +242,7 @@
     "fileId": "3f9DTXhwpEXKOYj8Greja6"
   },
   {
-    "__type__": "718ba5tSftIuYYcwOf3sIOI",
+    "__type__": "947e6g/fiBKoqS50a7WSUSg",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -253,11 +253,13 @@
     "__prefab": {
       "__id__": 13
     },
+    "pieceName": "bear",
+    "pieceState": "NORMAL",
     "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
-    "fileId": "582RTcud9DIJ/QGfDl8gFv"
+    "fileId": "81+Q8DKAxPWLtgd5LGTbb5"
   },
   {
     "__type__": "cc.PrefabInfo",

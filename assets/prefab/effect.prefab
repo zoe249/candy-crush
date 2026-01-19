@@ -1,7 +1,7 @@
 [
   {
     "__type__": "cc.Prefab",
-    "_name": "chicken",
+    "_name": "effect",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_native": "",
@@ -13,7 +13,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "chicken",
+    "_name": "effect",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": null,
@@ -28,24 +28,15 @@
       },
       {
         "__id__": 6
-      },
-      {
-        "__id__": 8
-      },
-      {
-        "__id__": 10
-      },
-      {
-        "__id__": 12
       }
     ],
     "_prefab": {
-      "__id__": 14
+      "__id__": 8
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -205.022,
-      "y": 176.705,
+      "x": 0,
+      "y": 0,
       "z": 0
     },
     "_lrot": {
@@ -62,7 +53,7 @@
       "z": 1
     },
     "_mobility": 0,
-    "_layer": 33554432,
+    "_layer": 1073741824,
     "_euler": {
       "__type__": "cc.Vec3",
       "x": 0,
@@ -85,8 +76,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 90,
-      "height": 90
+      "width": 112,
+      "height": 113
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -97,7 +88,7 @@
   },
   {
     "__type__": "cc.CompPrefabInfo",
-    "fileId": "b9S1nN/59BrqXMhiTK8YGk"
+    "fileId": "a5SidZ0ZNAxZ53La20yNFT"
   },
   {
     "__type__": "cc.Sprite",
@@ -122,12 +113,12 @@
       "a": 255
     },
     "_spriteFrame": {
-      "__uuid__": "e5672f76-9e9b-48e7-a6c2-94441d9d8bd8@8c36d",
+      "__uuid__": "98bc59ee-42dd-46f9-93ad-4008a385d8b8@9b713",
       "__expectedType__": "cc.SpriteFrame"
     },
     "_type": 0,
     "_fillType": 0,
-    "_sizeMode": 0,
+    "_sizeMode": 1,
     "_fillCenter": {
       "__type__": "cc.Vec2",
       "x": 0,
@@ -137,12 +128,15 @@
     "_fillRange": 0,
     "_isTrimmedMode": true,
     "_useGrayscale": false,
-    "_atlas": null,
+    "_atlas": {
+      "__uuid__": "98bc59ee-42dd-46f9-93ad-4008a385d8b8",
+      "__expectedType__": "cc.SpriteAtlas"
+    },
     "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
-    "fileId": "1aVCTg7wBGQpyJQJ261krc"
+    "fileId": "61L6oQbGFAeJN3My48WIR2"
   },
   {
     "__type__": "cc.Animation",
@@ -159,107 +153,19 @@
     "playOnLoad": false,
     "_clips": [
       {
-        "__uuid__": "864349bb-9dca-461e-ba97-e62d8bd23dfb",
+        "__uuid__": "2f0c438c-fb8e-4168-8db4-112b58d4cf48",
         "__expectedType__": "cc.AnimationClip"
       }
     ],
     "_defaultClip": {
-      "__uuid__": "864349bb-9dca-461e-ba97-e62d8bd23dfb",
+      "__uuid__": "2f0c438c-fb8e-4168-8db4-112b58d4cf48",
       "__expectedType__": "cc.AnimationClip"
     },
     "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
-    "fileId": "c3xt6B/xdLlYqVYQ5fwzNQ"
-  },
-  {
-    "__type__": "cc.RigidBody2D",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 1
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 9
-    },
-    "enabledContactListener": false,
-    "bullet": false,
-    "awakeOnLoad": true,
-    "_group": 1,
-    "_type": 0,
-    "_allowSleep": true,
-    "_gravityScale": 1,
-    "_linearDamping": 0,
-    "_angularDamping": 0,
-    "_linearVelocity": {
-      "__type__": "cc.Vec2",
-      "x": 0,
-      "y": 0
-    },
-    "_angularVelocity": 0,
-    "_fixedRotation": false,
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "b053BjxJhH/Y6vYueR3RM+"
-  },
-  {
-    "__type__": "cc.BoxCollider2D",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 1
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 11
-    },
-    "tag": 0,
-    "_group": 1,
-    "_density": 1,
-    "_sensor": false,
-    "_friction": 0.2,
-    "_restitution": 0,
-    "_offset": {
-      "__type__": "cc.Vec2",
-      "x": 0,
-      "y": 0
-    },
-    "_size": {
-      "__type__": "cc.Size",
-      "width": 90,
-      "height": 9
-    },
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "898FN3kOdODZcda7innag6"
-  },
-  {
-    "__type__": "947e6g/fiBKoqS50a7WSUSg",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 1
-    },
-    "_enabled": true,
-    "__prefab": {
-      "__id__": 13
-    },
-    "pieceName": "chicken",
-    "pieceState": "CLICK",
-    "_id": ""
-  },
-  {
-    "__type__": "cc.CompPrefabInfo",
-    "fileId": "d9gN/s3QlP1KlU1S8rX0JA"
+    "fileId": "45yMauqjtH3YUPb+u5CjdT"
   },
   {
     "__type__": "cc.PrefabInfo",

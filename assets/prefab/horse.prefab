@@ -28,10 +28,13 @@
       },
       {
         "__id__": 6
+      },
+      {
+        "__id__": 8
       }
     ],
     "_prefab": {
-      "__id__": 8
+      "__id__": 10
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -163,6 +166,26 @@
   {
     "__type__": "cc.CompPrefabInfo",
     "fileId": "36NJp/pFxNUaogjKqpAWQ/"
+  },
+  {
+    "__type__": "947e6g/fiBKoqS50a7WSUSg",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 1
+    },
+    "_enabled": true,
+    "__prefab": {
+      "__id__": 9
+    },
+    "pieceName": "horse",
+    "pieceState": "CLICK",
+    "_id": ""
+  },
+  {
+    "__type__": "cc.CompPrefabInfo",
+    "fileId": "1eaXSPM0xKBYMuVC4e5jHb"
   },
   {
     "__type__": "cc.PrefabInfo",
