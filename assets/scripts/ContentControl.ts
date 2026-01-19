@@ -12,7 +12,9 @@ import {
   UITransform,
   v2,
   v3,
-  tween
+  tween,
+  AudioSource,
+  Animation
 } from 'cc'
 const { ccclass, property } = _decorator
 
@@ -36,6 +38,11 @@ export class ContentControl extends Component {
   @property({ type: Number, tooltip: '棋子初始Y坐标' })
   public y: number = 240
 
+  @property({ type: Prefab })
+  public bom: Prefab; // 爆炸资源
+  @property({ type: Prefab })
+  public clickLight: Prefab; // 点击灯光资源
+
   @property({ tooltip: '棋盘节点' })
   public chessBoard: Node[][] = []
 
@@ -46,6 +53,17 @@ export class ContentControl extends Component {
   private startTouchPos: Vec2 = null
 
   isSwap: boolean = false // 是否正在交换
+
+  @property({ tooltip: '交换音效' })
+  audio: { [key: string]: AudioSource } = {}
+
+  onLoad() {
+    const audio = {}
+    this.node.getComponents(AudioSource).forEach(item => {
+      audio[item.clip.name] = item
+    })
+    this.audio = audio
+  }
 
   start() {
     this.generateBoard()
@@ -95,9 +113,12 @@ export class ContentControl extends Component {
    * @param event 触摸事件
    */
   onBoardTouchStart(event: EventTouch) {
-    console.log('event', event.getUILocation())
+    this.audio["drop"]?.play();
     this.startTouchPos = event.getUILocation()
     this.swapBeforeIndex = this.getPieceAtPosition(this.startTouchPos)
+    if (!this.swapBeforeIndex) return
+    const [row, col] = this.swapBeforeIndex
+    this.setClickLight(row, col)
   }
 
   /**
@@ -189,7 +210,7 @@ export class ContentControl extends Component {
   /**
    * 检测消除
    */
-  checkAndRemoveMatchesAt(pos: number[][]): boolean{
+  checkAndRemoveMatchesAt(pos: number[][]): boolean {
     let matches = []
     for (let [row, col] of pos) {
       // 横向匹配
@@ -199,15 +220,21 @@ export class ContentControl extends Component {
       matches = matches.concat(cols, rows)
     }
     if (matches.length === 0) return
+
+    const audioNum = matches.length > 6 ? 6 : matches.length;
+    this.audio[`eliminate${audioNum}`]?.play();
     // 消除
     for (let [row, col] of matches) {
       this.node.removeChild(this.chessBoard[row][col])
+      this.playBom(row, col)
       this.chessBoard[row][col] = null
     }
 
     const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
     if (movedPos.length > 0) {
-      this.checkAndRemoveMatchesAt(movedPos)
+      setTimeout(() => {
+        this.checkAndRemoveMatchesAt(movedPos)
+      }, 700)
     }
     return true
   }
@@ -295,7 +322,7 @@ export class ContentControl extends Component {
       // 往左遍历
       while (col - i >= 0 && this.chessBoard[row][col - i].name === current) {
         matches.push([row, col - i])
-        col++
+        i++
       }
       i = 1
       // 往右遍历
@@ -398,5 +425,25 @@ export class ContentControl extends Component {
     if (!target) return false
     const [row, col] = target
     return row >= 0 && row < boardHeight && col >= 0 && col < boardWidth
+  }
+
+  /**
+   * 播放爆炸动画
+   * @param row 行
+   * @param col 列
+   */
+  playBom(row: number, col: number) {
+    const [x, y] = this.getPiecePosition(row, col)
+    const bom = instantiate(this.bom)
+    bom.setPosition(x, y)
+    this.node.addChild(bom)
+    bom.getComponent(Animation).play()
+    setTimeout(() => {
+      bom.destroy()
+    }, 100)
+  }
+
+  setClickLight(row: number, col: number) {
+    this.chessBoard[row][col].getComponent(Animation).play()
   }
 }
