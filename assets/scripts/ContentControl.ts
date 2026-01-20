@@ -41,9 +41,9 @@ export class ContentControl extends Component {
   public y: number = 240
 
   @property({ type: Prefab })
-  public bom: Prefab; // 爆炸资源
+  public bom: Prefab // 爆炸资源
   @property({ type: Prefab })
-  public clickLight: Prefab; // 点击灯光资源
+  public clickLight: Prefab // 点击灯光资源
 
   @property({ tooltip: '棋盘节点' })
   public chessBoard: Node[][] = []
@@ -60,7 +60,10 @@ export class ContentControl extends Component {
   audio: { [key: string]: AudioSource } = {}
 
   @property({ type: Prefab })
-  public effect: Prefab; // 匹配灯资源
+  public effect: Prefab // 匹配灯资源
+
+  @property({ type: Prefab, tooltip: '爆炸行或列资源' })
+  public bombLineOrCol: Prefab
 
   onLoad() {
     const audio = {}
@@ -100,8 +103,14 @@ export class ContentControl extends Component {
     while (i < count) {
       const randomRow = Math.floor(Math.random() * this.boardHeight)
       const randomCol = Math.floor(Math.random() * this.boardWidth)
-      const randomPiece = this.chessBoard[randomRow][randomCol].getComponent(Piece)
-      randomPiece.pieceState = Math.random() <= 0.5 ? PieceState.LINE : Math.random() <= 0.5 ? PieceState.COLUMN : PieceState.WRAP
+      const randomPiece =
+        this.chessBoard[randomRow][randomCol].getComponent(Piece)
+      randomPiece.pieceState =
+        Math.random() <= 0.5
+          ? PieceState.LINE
+          : Math.random() <= 0.5
+            ? PieceState.COLUMN
+            : PieceState.WRAP
       randomPiece.loadPiece()
       i++
     }
@@ -136,18 +145,17 @@ export class ContentControl extends Component {
    * @param event 触摸事件
    */
   onBoardTouchStart(event: EventTouch) {
-    // this.audio["drop"]?.play();
+    this.audio['drop']?.play()
     this.startTouchPos = event.getUILocation()
     this.swapBeforeIndex = this.getPieceAtPosition(this.startTouchPos)
     if (!this.swapBeforeIndex) return
     const [row, col] = this.swapBeforeIndex
-    // this.setClickLight(row, col)
+    this.setClickLight(row, col)
 
-    // 附带技能的棋子
+    // 技能棋子
     const piece = this.chessBoard[row][col].getComponent(Piece)
     if (piece) {
-      this.playEffect(row, col)
-      console.log(piece.pieceState, '消除整列 or 消除整列')
+      // this.playEffect(row, col)
     }
   }
 
@@ -238,6 +246,58 @@ export class ContentControl extends Component {
   }
 
   /**
+   * 检查棋子状态
+   * @param matches 匹配位置
+   * @returns 特殊消除位置
+   */
+  checkPieceState(matches: number[][]): false | number[][] {
+    const specialMatches = []
+    matches.forEach(([row, col]) => {
+      const piece = this.chessBoard[row][col].getComponent(Piece)
+      console.log('piece.pieceState', piece.pieceState)
+      if (piece.pieceState !== PieceState.CLICK) {
+        specialMatches.push([row, col])
+      }
+    })
+    return specialMatches.length > 0 ? specialMatches : false
+  }
+
+  /**
+   * 检测特殊消除
+   * 1. 消除整行整列
+   * 2. 消除相同棋子
+   */
+  checkSpecialMatches(matches: number[][], specialMatches: number[][]) {
+    // 判断匹配到的棋子中，除去特殊棋子后的数量是否大于等于3
+    // 如果是，返回这些除去特殊棋子后的位置
+    const filteredMatches = matches.filter(([row, col]) => {
+      return !specialMatches.some(([specialRow, specialCol]) => {
+        const specialPiece =
+          this.chessBoard[specialRow][specialCol].getComponent(Piece)
+        const piece = this.chessBoard[row][col].getComponent(Piece)
+        return specialPiece.name === piece.name
+      })
+    })
+    return filteredMatches.length >= 3 ? filteredMatches : false
+  }
+
+  /**
+   * 整行或者整列消除
+   * @param specialMatches 
+   */
+  removeSpecialMatches(specialMatches: number[][]) {
+    // 消除特殊棋子，并使用技能消除整行或整列
+    for (let [row, col] of specialMatches) {
+      const piece = this.chessBoard[row][col].getComponent(Piece)
+      if (piece.pieceState !== PieceState.CLICK) {
+        // this.node.removeChild(this.chessBoard[row][col])
+        // this.playBom(row, col)
+        // this.chessBoard[row][col] = null
+      }
+    }
+  }
+
+  /**
    * 检测消除
    */
   checkAndRemoveMatchesAt(pos: number[][]): boolean {
@@ -251,17 +311,39 @@ export class ContentControl extends Component {
     }
     if (matches.length === 0) return
 
-    const audioNum = matches.length > 6 ? 6 : matches.length;
-    this.audio[`eliminate${audioNum}`]?.play();
+    const audioNum = matches.length > 6 ? 6 : matches.length
+    this.audio[`eliminate${audioNum}`]?.play()
+
+    const specialMatches = this.checkPieceState(matches)
     // 消除
-    for (let [row, col] of matches) {
-      this.node.removeChild(this.chessBoard[row][col])
-      this.playBom(row, col)
-      this.chessBoard[row][col] = null
+    if (!specialMatches) {
+      for (let [row, col] of matches) {
+        this.node.removeChild(this.chessBoard[row][col])
+        this.playBom(row, col)
+        this.chessBoard[row][col] = null
+      }
+    } else {
+      console.log({ specialMatches, matches })
+      console.log('技能消除')
+      const _matches = this.checkSpecialMatches(matches, specialMatches)
+      if (_matches) {
+        for (let [row, col] of _matches) {
+          this.node.removeChild(this.chessBoard[row][col])
+          this.playBom(row, col)
+          this.chessBoard[row][col] = null
+        }
+        // 使用技能消除整行
+        this.removeSpecialMatches(specialMatches)
+      }
     }
 
     const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
     if (movedPos.length > 0) {
+      /**
+       * todo 待优化
+       * 不应该用 setTimeout 来延迟
+       * 而是在上次的消除动画完成之后再检测
+       */
       setTimeout(() => {
         this.checkAndRemoveMatchesAt(movedPos)
       }, 700)

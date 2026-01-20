@@ -473,6 +473,10 @@
       "__uuid__": "8dbf43f8-2752-4a36-9dd5-8e57bce36562",
       "__expectedType__": "cc.Prefab"
     },
+    "bombLineOrCol": {
+      "__uuid__": "a5e52d3b-9df8-45fd-9d7c-6d1fc2b2dd1e",
+      "__expectedType__": "cc.Prefab"
+    },
     "_id": "cfRo1qKPpEVaE7h0RgvXnq"
   },
   {
