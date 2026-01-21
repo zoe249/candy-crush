@@ -283,16 +283,44 @@ export class ContentControl extends Component {
 
   /**
    * 整行或者整列消除
-   * @param specialMatches 
+   * @param specialMatches
    */
   removeSpecialMatches(specialMatches: number[][]) {
+    const removeLine = row => {
+      for (let col = 0; col < this.boardWidth; col++) {
+        this.node.removeChild(this.chessBoard[row][col])
+        this.chessBoard[row][col] = null
+      }
+    }
+    const removeColumn = col => {
+      for (let row = 0; row < this.boardHeight; row++) {
+        this.node.removeChild(this.chessBoard[row][col])
+        // this.playBom(row, col)
+        this.chessBoard[row][col] = null
+      }
+    }
     // 消除特殊棋子，并使用技能消除整行或整列
     for (let [row, col] of specialMatches) {
-      const piece = this.chessBoard[row][col].getComponent(Piece)
-      if (piece.pieceState !== PieceState.CLICK) {
-        // this.node.removeChild(this.chessBoard[row][col])
-        // this.playBom(row, col)
-        // this.chessBoard[row][col] = null
+      const piece = this.chessBoard[row][col]?.getComponent(Piece)
+      if (piece?.pieceState !== PieceState.CLICK) {
+        if (piece?.pieceState === PieceState.LINE) {
+          // 消除整行
+          this.audio['swap_lineline']?.play()
+          removeLine(row)
+          this.playBombLineOrCol(row, col, 'line')
+        } else if (piece?.pieceState === PieceState.COLUMN) {
+          // 消除整列
+          this.audio['swap_wrapline']?.play()
+          removeColumn(col)
+          this.playBombLineOrCol(row, col, 'col')
+        } else if (piece?.pieceState === PieceState.WRAP) {
+          // 消除整行整列
+          this.audio['swap_wrapwrap']?.play()
+          removeLine(row)
+          removeColumn(col)
+          this.playBombLineOrCol(row, col, 'col')
+          this.playBombLineOrCol(row, col, 'line')
+        }
       }
     }
   }
@@ -323,8 +351,6 @@ export class ContentControl extends Component {
         this.chessBoard[row][col] = null
       }
     } else {
-      console.log({ specialMatches, matches })
-      console.log('技能消除')
       const _matches = this.checkSpecialMatches(matches, specialMatches)
       if (_matches) {
         for (let [row, col] of _matches) {
@@ -332,22 +358,24 @@ export class ContentControl extends Component {
           this.playBom(row, col)
           this.chessBoard[row][col] = null
         }
-        // 使用技能消除整行
-        this.removeSpecialMatches(specialMatches)
       }
+      // 使用技能消除整行或整列
+      this.removeSpecialMatches(specialMatches)
     }
 
-    const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
-    if (movedPos.length > 0) {
-      /**
-       * todo 待优化
-       * 不应该用 setTimeout 来延迟
-       * 而是在上次的消除动画完成之后再检测
-       */
-      setTimeout(() => {
-        this.checkAndRemoveMatchesAt(movedPos)
-      }, 700)
-    }
+    setTimeout(() => {
+      const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
+      if (movedPos.length > 0) {
+        /**
+         * todo 待优化
+         * 不应该用 setTimeout 来延迟
+         * 而是在填充动画结束后再检测
+         */
+        setTimeout(() => {
+          this.checkAndRemoveMatchesAt(movedPos)
+        }, 700)
+      }
+    }, 100)
     return true
   }
 
@@ -568,6 +596,17 @@ export class ContentControl extends Component {
     bom.getComponent(Animation).play()
     setTimeout(() => {
       bom.destroy()
+    }, 100)
+  }
+
+  playBombLineOrCol(row: number, col: number, name: string) {
+    const [x, y] = this.getPiecePosition(row, col)
+    const bombLineOrCol = instantiate(this.bombLineOrCol)
+    bombLineOrCol.setPosition(x, y)
+    this.node.addChild(bombLineOrCol)
+    bombLineOrCol.getComponent(Animation).play(name)
+    setTimeout(() => {
+      bombLineOrCol.destroy()
     }, 100)
   }
 
