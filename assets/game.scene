@@ -674,7 +674,7 @@
       "__expectedType__": "cc.AudioClip"
     },
     "_loop": true,
-    "_playOnAwake": true,
+    "_playOnAwake": false,
     "_volume": 0.5,
     "_id": "50Q1QVg3FMo5LCmvUF+N85"
   },
