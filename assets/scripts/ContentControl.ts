@@ -65,6 +65,9 @@ export class ContentControl extends Component {
   @property({ type: Prefab, tooltip: '爆炸行或列资源' })
   public bombLineOrCol: Prefab
 
+  @property({ tooltip: '连续消除次数' })
+  comboCount: number = -1
+
   onLoad() {
     const audio = {}
     this.node.getComponents(AudioSource).forEach(item => {
@@ -329,6 +332,7 @@ export class ContentControl extends Component {
    */
   async checkAndRemoveMatchesAt(pos: number[][]): Promise<boolean> {
     let matches = []
+
     for (let [row, col] of pos) {
       // 横向匹配
       let cols = this.checkMatch(row, col, true)
@@ -336,8 +340,10 @@ export class ContentControl extends Component {
       let rows = this.checkMatch(row, col, false)
       matches = matches.concat(cols, rows)
     }
-    if (matches.length === 0) return
 
+    if (matches.length === 0) return
+    // 连续消除计数
+    this.comboCount = this.comboCount === 11 ? 11 : this.comboCount + 2 
     const audioNum = matches.length > 6 ? 6 : matches.length
     this.audio[`eliminate${audioNum}`]?.play()
 
@@ -362,10 +368,14 @@ export class ContentControl extends Component {
       this.removeSpecialMatches(specialMatches)
     }
 
-    const movedPos = []
-    Promise.all([this.movePiecesDown(), this.refillAndCheck()]).then(result => {
-      movedPos.push(...result[0], ...result[1])
-      this.checkAndRemoveMatchesAt(movedPos)
+    Promise.all([this.movePiecesDown(), this.refillAndCheck()]).then( async (result) => {
+      const movedPos = [...result[0], ...result[1]]
+      // 播放连续消除音效
+      const isMatch = await this.checkAndRemoveMatchesAt(movedPos)
+      if (!isMatch) {
+        this.audio[`contnuousMatch${this.comboCount}`]?.play()
+        this.comboCount = -1
+      }
     })
     return true
   }
