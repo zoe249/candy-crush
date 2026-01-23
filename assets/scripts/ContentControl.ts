@@ -17,6 +17,7 @@ import {
   Animation
 } from 'cc'
 import { Piece, PieceState } from './Piece'
+import { AnimationGenerator } from './AnimationGenerator'
 
 const { ccclass, property } = _decorator
 
@@ -65,9 +66,6 @@ export class ContentControl extends Component {
   @property({ type: Prefab, tooltip: '爆炸行或列资源' })
   public bombLineOrCol: Prefab
 
-  @property({ tooltip: '连续消除次数' })
-  comboCount: number = -1
-
   onLoad() {
     const audio = {}
     this.node.getComponents(AudioSource).forEach(item => {
@@ -82,6 +80,11 @@ export class ContentControl extends Component {
   }
 
   update(deltaTime: number) {}
+
+  generateAnimation() {
+    const animationGenerator = this.node.getComponent(animationGenerator)
+    // animationGenerator.loadFramesFromResources(pieceName, pieceState)
+  }
 
   generateBoard() {
     this.chessBoard = Array.from({ length: this.boardHeight }, () =>
@@ -170,11 +173,11 @@ export class ContentControl extends Component {
     const target = this.getSwappingPieces(event)
     const [row, col] = this.swapBeforeIndex
     if (!target) return
-    this.swapPiece([row, col], target, async (isSame: boolean) => {
+    this.swapPiece([row, col], target, (isSame: boolean) => {
       if (isSame) {
         this.swapPiece([row, col], target)
       } else {
-        const isMatch = await this.checkAndRemoveMatchesAt([[row, col], target])
+        const isMatch = this.checkAndRemoveMatchesAt([[row, col], target])
         if (!isMatch) this.swapPiece([row, col], target)
       }
     })
@@ -257,6 +260,7 @@ export class ContentControl extends Component {
     const specialMatches = []
     matches.forEach(([row, col]) => {
       const piece = this.chessBoard[row][col].getComponent(Piece)
+      console.log('piece.pieceState', piece.pieceState)
       if (piece.pieceState !== PieceState.CLICK) {
         specialMatches.push([row, col])
       }
@@ -330,9 +334,8 @@ export class ContentControl extends Component {
   /**
    * 检测消除
    */
-  async checkAndRemoveMatchesAt(pos: number[][]): Promise<boolean> {
+  checkAndRemoveMatchesAt(pos: number[][]): boolean {
     let matches = []
-
     for (let [row, col] of pos) {
       // 横向匹配
       let cols = this.checkMatch(row, col, true)
@@ -340,10 +343,8 @@ export class ContentControl extends Component {
       let rows = this.checkMatch(row, col, false)
       matches = matches.concat(cols, rows)
     }
-
     if (matches.length === 0) return
-    // 连续消除计数
-    this.comboCount = this.comboCount === 11 ? 11 : this.comboCount + 2 
+
     const audioNum = matches.length > 6 ? 6 : matches.length
     this.audio[`eliminate${audioNum}`]?.play()
 
@@ -368,15 +369,19 @@ export class ContentControl extends Component {
       this.removeSpecialMatches(specialMatches)
     }
 
-    Promise.all([this.movePiecesDown(), this.refillAndCheck()]).then( async (result) => {
-      const movedPos = [...result[0], ...result[1]]
-      // 播放连续消除音效
-      const isMatch = await this.checkAndRemoveMatchesAt(movedPos)
-      if (!isMatch) {
-        this.audio[`contnuousMatch${this.comboCount}`]?.play()
-        this.comboCount = -1
+    setTimeout(() => {
+      const movedPos = [...this.movePiecesDown(), ...this.refillAndCheck()]
+      if (movedPos.length > 0) {
+        /**
+         * todo 待优化
+         * 不应该用 setTimeout 来延迟
+         * 而是在填充动画结束后再检测
+         */
+        setTimeout(() => {
+          this.checkAndRemoveMatchesAt(movedPos)
+        }, 700)
       }
-    })
+    }, 100)
     return true
   }
 
@@ -385,7 +390,6 @@ export class ContentControl extends Component {
    */
   movePiecesDown() {
     const movedPos = []
-    const animationPromises: Promise<void>[] = []
     for (let col = this.chessBoard[0].length - 1; col >= 0; col--) {
       let nullCount = 0
       for (let row = this.chessBoard.length - 1; row >= 0; row--) {
@@ -393,18 +397,17 @@ export class ContentControl extends Component {
         if (piece === null) {
           nullCount++
         } else if (nullCount > 0) {
-          const animationPromise = this.downAnimation(
+          this.downAnimation(
             this.chessBoard[row][col],
             this.getPiecePosition(row + nullCount, col)
           )
-          animationPromises.push(animationPromise)
           this.chessBoard[row + nullCount][col] = this.chessBoard[row][col]
           this.chessBoard[row][col] = null
           movedPos.push([row + nullCount, col])
         }
       }
     }
-    return Promise.all(animationPromises).then(() => movedPos)
+    return movedPos
   }
 
   /**
@@ -413,44 +416,34 @@ export class ContentControl extends Component {
    * @param param1 目标位置
    */
   downAnimation(node: Node, [x, y]: number[], cb?: () => void) {
-    return new Promise<void>(resolve => {
-      const speed = 0.5
-      tween(node)
-        .to(speed, { position: v3(x, y) })
-        .call(() => {
-          resolve()
-        })
-        .start()
-    })
+    const speed = 0.2
+    tween(node)
+      .to(speed, { position: v3(x, y) })
+      .call(() => {
+        cb?.()
+      })
+      .start()
   }
 
   /**
    * 重新填充和检查棋子
-   * @param nullCount 需要填充的空位数量
-   * @returns Promise<number[][]> 返回移动过的棋子位置数组
    */
   refillAndCheck() {
     const movedPos = []
-    const animationPromises: Promise<void>[] = []
-
     for (let row = this.chessBoard.length - 1; row >= 0; row--) {
       for (let col = 0; col < this.chessBoard[row].length; col++) {
         if (this.chessBoard[row][col] === null) {
           this.chessBoard[row][col] = this.generatePiece(-(row + 1), col)
           movedPos.push([row, col])
-
-          // 收集动画 Promise
-          const animationPromise = this.downAnimation(
+          this.downAnimation(
             this.chessBoard[row][col],
             this.getPiecePosition(row, col)
           )
-          animationPromises.push(animationPromise)
         }
       }
     }
 
-    // 等待所有动画完成
-    return Promise.all(animationPromises).then(() => movedPos)
+    return movedPos
   }
 
   /**

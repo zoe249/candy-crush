@@ -5,8 +5,8 @@ export enum PieceState {
   CLICK = 'CLICK',
   LINE = 'LINE',
   COLUMN = 'COLUMN',
-  WRAP = 'WRAP',
-//   ELIMINATE_SAME = 'ELIMINATE_SAME'
+  WRAP = 'WRAP'
+  //   ELIMINATE_SAME = 'ELIMINATE_SAME'
 }
 /**
  * 其子类需要实现的方法
@@ -18,7 +18,6 @@ export enum PieceState {
 
 @ccclass('Piece')
 export class Piece extends Component {
-
   @property({ type: String, tooltip: '棋子名称' })
   pieceName: string = ''
 
@@ -34,6 +33,9 @@ export class Piece extends Component {
   pieceState: string = PieceState.CLICK
 
   private path: string = 'pieces/'
+
+  // frameCount: number = 0
+
   start() {
     // this.loadPiece()
   }
@@ -44,7 +46,7 @@ export class Piece extends Component {
     this.pieceState = state
     this.loadPiece()
   }
-  
+
   resolvePath() {
     const suffix = this.pieceState.toLocaleLowerCase()
     return `${this.path}${this.pieceName}/${this.pieceName}_${suffix}_00`
