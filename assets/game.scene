@@ -504,6 +504,7 @@
       "__uuid__": "a5e52d3b-9df8-45fd-9d7c-6d1fc2b2dd1e",
       "__expectedType__": "cc.Prefab"
     },
+    "comboCount": -1,
     "_id": "cfRo1qKPpEVaE7h0RgvXnq"
   },
   {
@@ -692,7 +693,7 @@
       "__expectedType__": "cc.AudioClip"
     },
     "_loop": true,
-    "_playOnAwake": false,
+    "_playOnAwake": true,
     "_volume": 0.5,
     "_id": "50Q1QVg3FMo5LCmvUF+N85"
   },
@@ -852,7 +853,6 @@
     "__type__": "7bde2DqgjVPRZKUx71Qgcuf",
     "_name": "",
     "_objFlags": 0,
-    "__editorExtras__": {},
     "node": {
       "__id__": 8
     },
