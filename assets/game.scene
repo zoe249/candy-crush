@@ -850,16 +850,16 @@
     "_id": "d00S86HB5EfKMYYlSPlBEp"
   },
   {
-    "__type__": "7bde2DqgjVPRZKUx71Qgcuf",
+    "__type__": "a75be+r+WFMOLitk0GyAxqE",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 8
     },
     "_enabled": true,
     "__prefab": null,
-    "pieceName": "",
-    "_id": "59yJ9uzhZA6a1BZDy1OREG"
+    "_id": "b3JSoA+whOVo+ar7vFUnD1"
   },
   {
     "__type__": "cc.UITransform",

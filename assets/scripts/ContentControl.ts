@@ -17,6 +17,7 @@ import {
   Animation
 } from 'cc'
 import { Piece, PieceState } from './Piece'
+import { AnimationGenerator } from './AnimationGenerator'
 
 const { ccclass, property } = _decorator
 
@@ -68,6 +69,9 @@ export class ContentControl extends Component {
   @property({ tooltip: '连续消除次数' })
   comboCount: number = -1
 
+  skillPiece: Array<Piece> = [] // 技能棋子数组
+  skillPieceMaxCount: number = 5 // 技能棋子数量
+
   onLoad() {
     const audio = {}
     this.node.getComponents(AudioSource).forEach(item => {
@@ -83,6 +87,12 @@ export class ContentControl extends Component {
 
   update(deltaTime: number) {}
 
+  genderateAnimation(piece) {
+    const generate = this.node.addComponent(AnimationGenerator)
+    const pieceComp = piece.getComponent(Piece)
+    generate.loadFramesFromResources(piece.name, pieceComp.pieceState, piece)
+  }
+
   generateBoard() {
     this.chessBoard = Array.from({ length: this.boardHeight }, () =>
       Array.from({ length: this.boardWidth }, () => null)
@@ -91,31 +101,29 @@ export class ContentControl extends Component {
     for (let i = 0; i < this.boardHeight; i++) {
       for (let j = 0; j < this.boardWidth; j++) {
         this.chessBoard[i][j] = this.generatePiece(i, j)
+        this.setRandomPieceState(this.chessBoard[i][j])
       }
     }
-    this.setRandomPieceState()
+    // this.setRandomPieceState()
   }
 
   /**
    * 随机设置棋子状态
    * 挑选随机棋子为消除整列或消除整行
    */
-  setRandomPieceState() {
-    const count = 4
-    let i = 0
-    while (i < count) {
-      const randomRow = Math.floor(Math.random() * this.boardHeight)
-      const randomCol = Math.floor(Math.random() * this.boardWidth)
-      const randomPiece =
-        this.chessBoard[randomRow][randomCol].getComponent(Piece)
-      randomPiece.pieceState =
-        Math.random() <= 0.5
+  setRandomPieceState(piece: Node) {
+    const randomPiece = piece.getComponent(Piece)
+    randomPiece.pieceState =
+      Math.random() >= 0.1
+        ? PieceState.CLICK
+        : Math.random() <= 0.2
           ? PieceState.LINE
-          : Math.random() <= 0.5
-          ? PieceState.COLUMN
-          : PieceState.WRAP
-      randomPiece.loadPiece()
-      i++
+          : Math.random() <= 0.2
+            ? PieceState.COLUMN
+            : PieceState.WRAP
+    randomPiece.loadPiece()
+    if (randomPiece.pieceState !== PieceState.CLICK) {
+      this.genderateAnimation(piece)
     }
   }
 
@@ -343,7 +351,7 @@ export class ContentControl extends Component {
 
     if (matches.length === 0) return
     // 连续消除计数
-    this.comboCount = this.comboCount === 11 ? 11 : this.comboCount + 2 
+    this.comboCount = this.comboCount === 11 ? 11 : this.comboCount + 2
     const audioNum = matches.length > 6 ? 6 : matches.length
     this.audio[`eliminate${audioNum}`]?.play()
 
@@ -368,15 +376,17 @@ export class ContentControl extends Component {
       this.removeSpecialMatches(specialMatches)
     }
 
-    Promise.all([this.movePiecesDown(), this.refillAndCheck()]).then( async (result) => {
-      const movedPos = [...result[0], ...result[1]]
-      // 播放连续消除音效
-      const isMatch = await this.checkAndRemoveMatchesAt(movedPos)
-      if (!isMatch) {
-        this.audio[`contnuousMatch${this.comboCount}`]?.play()
-        this.comboCount = -1
+    Promise.all([this.movePiecesDown(), this.refillAndCheck()]).then(
+      async result => {
+        const movedPos = [...result[0], ...result[1]]
+        // 播放连续消除音效
+        const isMatch = await this.checkAndRemoveMatchesAt(movedPos)
+        if (!isMatch) {
+          this.audio[`contnuousMatch${this.comboCount}`]?.play()
+          this.comboCount = -1
+        }
       }
-    })
+    )
     return true
   }
 
@@ -437,6 +447,7 @@ export class ContentControl extends Component {
       for (let col = 0; col < this.chessBoard[row].length; col++) {
         if (this.chessBoard[row][col] === null) {
           this.chessBoard[row][col] = this.generatePiece(-(row + 1), col)
+          this.setRandomPieceState(this.chessBoard[row][col])
           movedPos.push([row, col])
 
           // 收集动画 Promise
@@ -624,6 +635,6 @@ export class ContentControl extends Component {
   }
 
   setClickLight(row: number, col: number) {
-    this.chessBoard[row][col].getComponent(Animation).play()
+    // this.chessBoard[row][col].getComponent(Animation).play()
   }
 }
