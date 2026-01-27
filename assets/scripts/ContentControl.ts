@@ -82,6 +82,7 @@ export class ContentControl extends Component {
 
   start() {
     this.generateBoard()
+    this.checkInitialMatches()
     this.onMove()
   }
 
@@ -113,18 +114,32 @@ export class ContentControl extends Component {
    */
   setRandomPieceState(piece: Node) {
     const randomPiece = piece.getComponent(Piece)
+    randomPiece.getComponent(UITransform).setContentSize(55, 55)
     randomPiece.pieceState =
       Math.random() >= 0.1
         ? PieceState.CLICK
         : Math.random() <= 0.2
           ? PieceState.LINE
-          : Math.random() <= 0.2
+          : Math.random() >= 0.2
             ? PieceState.COLUMN
             : PieceState.WRAP
     randomPiece.loadPiece()
     if (randomPiece.pieceState !== PieceState.CLICK) {
       this.genderateAnimation(piece)
     }
+  }
+
+  /**
+   * 初始化后检测消除
+   */
+  async checkInitialMatches() {
+    const allPositions: number[][] = []
+    for (let row = 0; row < this.boardHeight; row++) {
+      for (let col = 0; col < this.boardWidth; col++) {
+        allPositions.push([row, col])
+      }
+    }
+    await this.checkAndRemoveMatchesAt(allPositions)
   }
 
   generatePiece(i: number, j: number) {
@@ -623,15 +638,18 @@ export class ContentControl extends Component {
     }, 100)
   }
 
-  playBombLineOrCol(row: number, col: number, name: string) {
+  playBombLineOrCol(row: number, col: number, name: string, cb?: () => void) {
     const [x, y] = this.getPiecePosition(row, col)
     const bombLineOrCol = instantiate(this.bombLineOrCol)
     bombLineOrCol.setPosition(x, y)
     this.node.addChild(bombLineOrCol)
-    bombLineOrCol.getComponent(Animation).play(name)
-    setTimeout(() => {
-      bombLineOrCol.destroy()
-    }, 100)
+    const anim = bombLineOrCol.getComponent(Animation)
+    const state = anim.getState('effect_' + name)
+    state.on(Animation.EventType.FINISHED, () => {
+        bombLineOrCol.destroy()
+        cb?.()
+    })
+    anim.play('effect_' + name)
   }
 
   setClickLight(row: number, col: number) {
